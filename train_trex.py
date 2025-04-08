@@ -12,7 +12,15 @@ import models
 import dataset
 
 import pdb
-
+from torch.utils.tensorboard import SummaryWriter
+counter = 0
+while True:
+    log_dir = f'log/runs/trex_{counter}'  # for tensorboard
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+        break
+    counter += 1
+writer = SummaryWriter(log_dir=log_dir)
 parser = argparse.ArgumentParser(description='PyTorch actor-critic example')
 parser.add_argument('--env-name', default="Reacher-v1", metavar='G',
                     help='name of the environment to run')
@@ -34,8 +42,8 @@ parser.add_argument('--output_model_path', help='the output path for models and 
 parser.add_argument('--traj_len', type=int, help='the length of the partial trajectory')
 args = parser.parse_args()
 
-if not os.path.exists(args.output_model_path):
-    os.system('mkdir -p '+'/'.join(args.output_model_path.split('/')[:-1]))
+args.output_model_path = log_dir + '/model_ckpt'
+os.makedirs(args.output_model_path, exist_ok=True)
 
 if torch.cuda.is_available():
     use_gpu = True
@@ -97,9 +105,12 @@ for epoch in range(args.num_epochs):
         if iter_ > 10000:
             break
       print('Epoch {}, Acc {}'.format(epoch, acc_counter/counter))
-      if acc_counter/counter > best_acc:
-        best_acc = acc_counter/counter
-        torch.save(reward_net.state_dict(), args.output_model_path)
+      acc = acc_counter/counter
+      if acc > best_acc:
+        best_acc = acc
+        torch.save(reward_net.state_dict(), os.path.join(args.output_model_path, f'reward_net_best_{epoch}.pth'))
+      writer.add_scalar("Eval/Accuracy", acc, epoch)
+      writer.add_scalar("Eval/Best_Accuracy", best_acc, epoch)
 
     for iter_, data in enumerate(train_loader):
         traj1, rew1, traj2, rew2 = data
@@ -119,5 +130,7 @@ for epoch in range(args.num_epochs):
         optimizer.step()
         if iter_ % args.log_interval == 0:
             print('epoch {}, iter {}, training loss {}'.format(epoch, iter_, loss.item()))
+            writer.add_scalar("Train/Loss", loss.item(), epoch * len(train_loader) + iter_)
         if iter_ > 5000:
             break
+    writer.close()

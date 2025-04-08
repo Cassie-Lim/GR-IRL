@@ -5,3 +5,8 @@
 *.swp
 *.swo
 *.pth
+images/
+log/
+pytorch-trpo/the_log_path
+.vscode/
+__pycache__/

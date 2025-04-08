@@ -15,7 +15,62 @@ def rank_collate_func(items):
     item_list[1] = torch.Tensor(item_list[1]).float()
     item_list[3] = torch.Tensor(item_list[3]).float()
     return item_list
+class TrajDataset(data_utils.Dataset):
+    def __init__(self, traj_files, pair_nums, state_dim, action_dim, mode='state_only', traj_len=50, seed=1234):
+        self.trajs = []
+        self.sampled_trajs = []  # stores (demo_id, traj_idx, start_idx)
+        self.traj_len = traj_len
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.mode = mode
+        self.jump_steps = 1
+        self.action_limit = [-1., 1.]
+        np.random.seed(seed)
 
+        traj_index = 0
+        for demo_id, file in enumerate(traj_files):
+            data = pickle.load(open(file, 'rb'))
+            curr_trajs = data['traj']
+            self.trajs += curr_trajs
+
+            valid_indices = []
+            for i, traj in enumerate(curr_trajs):
+                max_start = max(1, len(traj) - traj_len * self.jump_steps + 1)
+                for j in range(max_start):
+                    valid_indices.append((demo_id, traj_index + i, j))
+
+            # Sample only the desired number of trajectories
+            if pair_nums is not None:
+                sampled = np.random.choice(len(valid_indices), pair_nums[demo_id], replace=False)
+                self.sampled_trajs += [valid_indices[idx] for idx in sampled]
+            else:
+                self.sampled_trajs += valid_indices
+
+            traj_index += len(curr_trajs)
+    def __len__(self):
+        return len(self.sampled_trajs)
+
+    def __getitem__(self, index):
+        demo_id, traj_idx, start = self.sampled_trajs[index]
+        traj = self.trajs[traj_idx]
+        ret_traj = []
+
+        for i in range(0, min(self.traj_len * self.jump_steps, len(traj) - start), self.jump_steps):
+            step = traj[start + i]
+            if self.mode == 'state_only':
+                ret_traj.append(step[0:self.state_dim])
+            elif self.mode == 'state_pair':
+                next_step = traj[start + i + 1]
+                ret_traj.append(np.concatenate([step[0:self.state_dim], next_step[0:self.state_dim]], axis=0))
+            elif self.mode == 'state_action':
+                r_pair = np.array(step)
+                r_pair[self.state_dim:] = np.clip(r_pair[self.state_dim:], self.action_limit[0], self.action_limit[1])
+                ret_traj.append(r_pair)
+            else:
+                raise NotImplementedError
+
+        ret_traj = np.array(ret_traj)
+        return torch.from_numpy(ret_traj).float(), demo_id
 class RankingLimitDataset(data_utils.Dataset):
     def __init__(self, traj_files, pair_nums, state_dim, action_dim, mode='state_only', traj_len=50, seed=1234):
         self.pairs1 = []

@@ -7,7 +7,7 @@ import scipy.optimize
 import pdb
 
 import torch
-from models import Policy, Value
+from models import *
 from replay_memory import Memory
 from running_state import ZFilter
 from torch.autograd import Variable
@@ -57,15 +57,12 @@ parser.add_argument('--prefix', default='', help='the prefix of the saved model'
 parser.add_argument('--mode', default=None, help='the mode')
 parser.add_argument('--output_path', default='model_ckpt')
 args = parser.parse_args()
-counter=0
-while True:
-    args.output_path = os.path.join(args.output_path, args.env_name.split('-')[0], str(counter))
-    if os.path.exists(args.output_path):
-        continue
+
+args.output_path = os.path.join(args.output_path, args.env_name.split('-')[0])
+if not os.path.exists(args.output_path):
     os.system('mkdir -p '+args.output_path)
-    writer = SummaryWriter(args.output_path)
-    log_stream = open(os.path.join(args.output_path, 'log.txt'), 'w')
-    break
+writer = SummaryWriter(args.output_path)
+log_stream = open(os.path.join(args.output_path, 'log.txt'), 'w')
 
 if args.mode is not None:
     env = gym.make(args.env_name, reward_mode=args.mode)

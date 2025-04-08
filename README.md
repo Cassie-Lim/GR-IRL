@@ -50,5 +50,19 @@ To test the learned reward, we use the reinforcement learning code modified from
 `
 cd pytorch-trpo
 
-python main_trex.py --env-name Hopper-v0 --test-env-name Hopper-v3 --batch-size 15000 --save-interval 5 --reward_model ../log/hopper.pth  --mode state_action --prefix 1 --output_path the_log_path
+python main_trex.py --env-name Hopper-v3 --test-env-name Hopper-v3 --batch-size 15000 --save-interval 5 --reward_model ../log/hopper_trex.pth   --prefix 1 --output_path the_log_path --render
+`
+
+
+
+`python
+
+python viz_gs_reward.py \
+  --test_demo_files ./demo/Hopper-v3_noise_0.0_interval_1_rew_45.43.pt ./demo/Hopper-v3_noise_0.0_interval_1_rew_162.11.pt ./demo/Hopper-v3_noise_0.0_interval_1_rew_410.32.pt ./demo/Hopper-v3_noise_0.0_interval_1_rew_529.22.pt ./demo/Hopper-v3_noise_0.0_interval_1_rew_947.06.pt ./demo/Hopper-v3_noise_0.0_interval_1_rew_1678.93.pt ./demo/Hopper-v3_noise_0.0_interval_1_rew_2096.12.pt ./demo/Hopper-v3_noise_0.0_interval_1_rew_2977.82.pt ./demo/Hopper-v3_noise_0.0_interval_1_rew_3281.01.pt  \
+  --output_model_path log/runs/grirl_0/model_ckpt/reward_net_best_14.pth \
+  --dataset_mode partial \
+  --mode state_action \
+  --traj_len 50 \
+  --env_name Hopper-v3
+
 `
