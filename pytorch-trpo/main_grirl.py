@@ -7,13 +7,16 @@ import scipy.optimize
 import pdb
 
 import torch
-from models import *
+from models_ac import Policy, Value
+from models import GaussianRewardNet
 from replay_memory import Memory
 from running_state import ZFilter
 from torch.autograd import Variable
 from trpo import trpo_step
 from utils import *
 from torch.utils.tensorboard import SummaryWriter
+import custom_envs.hopper
+import custom_envs.walker2d
 
 # import swimmer
 # import reacher
@@ -58,11 +61,17 @@ parser.add_argument('--mode', default=None, help='the mode')
 parser.add_argument('--output_path', default='model_ckpt')
 args = parser.parse_args()
 
-args.output_path = os.path.join(args.output_path, args.env_name.split('-')[0])
-if not os.path.exists(args.output_path):
+counter = 0
+while True:
+    output_path = os.path.join(args.output_path, 'GRIRL', args.env_name.split('-')[0], str(counter))
+    if os.path.exists(output_path):
+        continue
+    args.output_path = output_path
     os.system('mkdir -p '+args.output_path)
-writer = SummaryWriter(args.output_path)
-log_stream = open(os.path.join(args.output_path, 'log.txt'), 'w')
+    writer = SummaryWriter(args.output_path)
+    log_stream = open(os.path.join(args.output_path, 'log.txt'), 'w')
+    break
+
 
 if args.mode is not None:
     env = gym.make(args.env_name, reward_mode=args.mode)
@@ -76,11 +85,11 @@ num_actions = env.action_space.shape[0]
 
 if args.mode is not None:
     if args.mode == 'state_only':
-        reward_net = RewardNet(num_inputs).float()
+        reward_net = GaussianRewardNet(num_inputs).float()
     elif args.mode == 'state_pair':
-        reward_net = RewardNet(num_inputs*2).float()
+        reward_net = GaussianRewardNet(num_inputs*2).float()
     elif args.mode == 'state_action':
-        reward_net = RewardNet(num_inputs+num_actions).float()
+        reward_net = GaussianRewardNet(num_inputs+num_actions).float()
     reward_net.load_state_dict(torch.load(args.reward_model, map_location='cpu'))
     env.set_reward_net(reward_net)
 

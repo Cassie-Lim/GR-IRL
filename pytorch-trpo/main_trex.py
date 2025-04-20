@@ -7,14 +7,16 @@ import scipy.optimize
 import pdb
 
 import torch
-from models import Policy, Value
+from models_ac import Policy, Value
+from models import RewardNet
 from replay_memory import Memory
 from running_state import ZFilter
 from torch.autograd import Variable
 from trpo import trpo_step
 from utils import *
 from torch.utils.tensorboard import SummaryWriter
-
+import custom_envs.hopper
+import custom_envs.walker2d
 # import swimmer
 # import reacher
 # import inverted_double_pendulum
@@ -59,9 +61,10 @@ parser.add_argument('--output_path', default='model_ckpt')
 args = parser.parse_args()
 counter=0
 while True:
-    args.output_path = os.path.join(args.output_path, args.env_name.split('-')[0], str(counter))
-    if os.path.exists(args.output_path):
+    output_path = os.path.join(args.output_path, 'TREX', args.env_name.split('-')[0], str(counter))
+    if os.path.exists(output_path):
         continue
+    args.output_path = output_path
     os.system('mkdir -p '+args.output_path)
     writer = SummaryWriter(args.output_path)
     log_stream = open(os.path.join(args.output_path, 'log.txt'), 'w')

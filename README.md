@@ -77,7 +77,7 @@ To test the learned reward, we use the reinforcement learning code modified from
 `
 cd pytorch-trpo
 
-python main_trex.py --env-name Hopper-v3 --test-env-name Hopper-v3 --batch-size 15000 --save-interval 5 --reward_model ../log/hopper_trex.pth   --prefix 1 --output_path the_log_path --render
+python pytorch-trpo/main_trex.py --env-name CustomHopper-v0 --test-env-name CustomHopper-v0 --batch-size 15000 --save-interval 5 --reward_model log/hopper_trex.pth  --mode state_action --prefix 1 --output_path pytorch-trpo/the_log_path --render
 `
 
 

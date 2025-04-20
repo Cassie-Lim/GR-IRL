@@ -76,7 +76,7 @@ class GaussianRewardNet(nn.Module):
         sigma = torch.nn.functional.softplus(log_var)  # ensure positive std
         return mu, sigma
 
-    def compute_reward(self, x):
+    def compute_reward(self, x, return_std=False):
         """
         For evaluation. Returns mean reward and std dev as floats.
         """
@@ -85,4 +85,7 @@ class GaussianRewardNet(nn.Module):
             if len(x.shape) == 1:
                 x = x.view(1, -1)
             mu, sigma = self.forward(x)
-        return mu.item(), sigma.item()
+        if return_std:
+            return mu.item(), sigma.item()
+        else:
+            return mu.item()
