@@ -5,9 +5,10 @@ import gym
 import scipy.optimize
 
 import torch
-from models import *
+from models_ac import *
 from replay_memory import Memory
 from running_state import ZFilter
+import os
 from torch.autograd import Variable
 from trpo import trpo_step
 from utils import *
@@ -34,11 +35,14 @@ parser.add_argument('--seed', type=int, default=543, metavar='N',
                     help='random seed (default: 1)')
 parser.add_argument('--batch-size', type=int, default=15000, metavar='N',
                     help='random seed (default: 1)')
+parser.add_argument('--noise',    type=float, default=0.0,  help='amount of env noise')
 parser.add_argument('--render', action='store_true',
                     help='render the environment')
-parser.add_argument('--log-interval', type=int, default=1, metavar='N',
+parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='interval between training status logs (default: 10)')
 args = parser.parse_args()
+
+os.makedirs('../demo', exist_ok=True)
 
 env = gym.make(args.env_name)
 
@@ -175,3 +179,17 @@ for i_episode in count(1):
     if i_episode % args.log_interval == 0:
         print('Episode {}\tLast reward: {}\tAverage reward {:.2f}'.format(
             i_episode, reward_sum, reward_batch))
+        avg_rew = reward_batch
+        print(f'Episode {i_episode}\tLast reward: {reward_sum}\tAverage reward {avg_rew:.2f}')
+ 
+        # --- checkpoint here ---
+        fname = (
+            f"{args.env_name}"
+            f"_noise_{args.noise:.1f}"
+            f"_interval_{args.log_interval}"
+            f"_rew_{avg_rew:.2f}.pt"
+        )
+        path = os.path.join('../demo', fname)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        torch.save(policy_net.state_dict(), path)
+        print(f"  → saved checkpoint: {path}")

@@ -8,6 +8,8 @@ import pdb
 
 import torch
 from models_ac import Policy, Value
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from models import RewardNet
 from replay_memory import Memory
 from running_state import ZFilter
@@ -52,7 +54,7 @@ parser.add_argument('--render', action='store_true',
                     help='render the environment')
 parser.add_argument('--log-interval', type=int, default=1, metavar='N',
                     help='interval between training status logs (default: 10)')
-parser.add_argument('--save-interval', type=int, default=100, metavar='N',
+parser.add_argument('--save-interval', type=int, default=1, metavar='N',
                     help='interval between training status logs (default: 10)')
 parser.add_argument('--reward_model', help='the reward function model')
 parser.add_argument('--prefix', default='', help='the prefix of the saved model')

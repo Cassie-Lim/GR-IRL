@@ -119,21 +119,18 @@ for epoch in range(args.num_epochs):
         if use_gpu:
             traj1, rew1, traj2, rew2 = [t.cuda() for t in traj1], rew1.cuda(), [t.cuda() for t in traj2], rew2.cuda()
 
-        optimizer.zero_grad()
         mu1, var1 = compute_traj_reward(traj1, reward_net)
         mu2, var2 = compute_traj_reward(traj2, reward_net)
 
         score1 = mu1 + 0.5 * var1
         score2 = mu2 + 0.5 * var2
 
-        logit_diff = score1 - score2  # shape (B, 1)
-        prob = torch.sigmoid(logit_diff)
+        logit_diff = score1 - score2
+        label      = (rew1 > rew2).float().view(-1, 1)
 
-        label = (rew1 > rew2).float().view(-1, 1)
-        loss = -(
-            label * torch.log(prob + 1e-8) + (1 - label) * torch.log(1 - prob + 1e-8)
-        ).mean()
+        loss = torch.nn.BCEWithLogitsLoss()(logit_diff, label)
 
+        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
