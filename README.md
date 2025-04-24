@@ -20,6 +20,37 @@ To collect demonstrations, we use the reinforcement learning code [here](https:/
 
 Then we use the checkpoints at different episode to collect demonstrations with different reward and then we can derive the ranking.
 
+Take HalfCheetah-v3 for exmaple. First train policy with
+`
+python pytorch-trpo/main_trex.py \
+  --env-name HalfCheetah-v3 \
+  --test-env-name HalfCheetah-v3 \
+  --batch-size 15000 \
+  --save-interval 1 \
+  --prefix 1 \
+  --output_path model_ckpt/
+`
+You will get a list of ckpts within `pytorch-trpo/model_ckpt/HalfCheetah`. Then manually select some ckpts that have distinguishable rewards, e.g.:
+
+`python pytorch-trpo/generate_demos.py \
+  --env-name HalfCheetah-v3 \
+  --model-ckpts \
+  ./pytorch-trpo/model_ckpt/HalfCheetah/epoch_0000100_rew_660.51.pth \
+  ./pytorch-trpo/model_ckpt/HalfCheetah/epoch_0000200_rew_987.16.pth \
+  ./pytorch-trpo/model_ckpt/HalfCheetah/epoch_0000300_rew_1240.34.pth \
+  ./pytorch-trpo/model_ckpt/HalfCheetah/epoch_0000400_rew_1391.88.pth \
+  ./pytorch-trpo/model_ckpt/HalfCheetah/epoch_0000500_rew_1407.56.pth \
+  ./pytorch-trpo/model_ckpt/HalfCheetah/epoch_0000700_rew_1790.42.pth \
+  ./pytorch-trpo/model_ckpt/HalfCheetah/epoch_0001100_rew_2139.16.pth \
+  ./pytorch-trpo/model_ckpt/HalfCheetah/epoch_0002200_rew_2481.77.pth \
+  ./pytorch-trpo/model_ckpt/HalfCheetah/epoch_0003200_rew_2749.75.pth \
+  ./pytorch-trpo/model_ckpt/HalfCheetah/epoch_0005300_rew_3147.82.pth \
+  ./pytorch-trpo/model_ckpt/HalfCheetah/epoch_0006400_rew_3306.10.pth \
+  ./pytorch-trpo/model_ckpt/HalfCheetah/epoch_0012200_rew_3670.78.pth \
+  ./pytorch-trpo/model_ckpt/HalfCheetah/epoch_0019800_rew_4073.99.pth
+`
+
+This should give you a list of demos within `demo/HalfCheetah-v3`.
 
 ## Training
 
@@ -54,30 +85,36 @@ Note that you might need to tune `num_epochs` for different envs.
 ### Reward Visualization
 
 
-`python
-
-python viz_gs_reward.py \
+`python viz_gs_reward.py \
   --test_demo_files [a list of demo for visualization]  \
   --output_model_path log/runs/grirl_0/model_ckpt/reward_net_best_14.pth \
   --dataset_mode partial \
   --mode state_action \
   --traj_len 50 \
-  --env_name Hopper-v3
+  --env_name Hopper-v3`
 
-`
+  
 Note: better to choose demos whose rewards are distinctive enough.
 
 ### Reward Quality Eval
 
 
-[TODO] This part of test code is not working right now.
 
-To test the learned reward, we use the reinforcement learning code modified from [here](https://github.com/ikostrikov/pytorch-trpo).
+To test the learned reward, we use the reinforcement learning code modified from [here](https://github.com/ikostrikov/pytorch-trpo). We basically try to train an actor critic network with the learned reward, and compare the ground truth rewards.
+
+To evaluate TREX model:
 
 `
-cd pytorch-trpo
+python pytorch-trpo/main_trex.py \
+  --env-name CustomHalfCheetah-v0 \
+  --test-env-name HalfCheetah-v3 \
+  --batch-size 15000 \
+  --save-interval 1 \
+  --reward_model log/runs/HalfCheetah-v3/trex_0/model_ckpt/reward_net_best_8.pth \
+  --mode state_action \
+  --prefix 1 \
+  --output_path pytorch-trpo/the_log_path`
 
-python pytorch-trpo/main_trex.py --env-name CustomHopper-v0 --test-env-name CustomHopper-v0 --batch-size 15000 --save-interval 5 --reward_model log/hopper_trex.pth  --mode state_action --prefix 1 --output_path pytorch-trpo/the_log_path --render
-`
-
+To evaluate GRIRL model, change to `pytorch-trpo/main_grirl.py` accordingly.
+You will then get a list of ckpts of policy networks in `pytorch-trpo/the_log_path/[METHOD]/CustomHalfCheetah/0`, change the path in `pytorch-trpo/eval_batch_ckpt.py` accordingly to get the result plots.
 
