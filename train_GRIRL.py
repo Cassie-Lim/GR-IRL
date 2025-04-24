@@ -9,14 +9,6 @@ import gym
 import models  # assume GaussianRewardNet is in models.py
 import dataset
 from torch.utils.tensorboard import SummaryWriter
-counter = 0
-while True:
-    log_dir = f'log/runs/grirl_{counter}'  # for tensorboard
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-        break
-    counter += 1
-writer = SummaryWriter(log_dir=log_dir)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--env-name', default="Reacher-v1")
@@ -30,8 +22,17 @@ parser.add_argument('--train_traj_nums', nargs='+', type=int)
 parser.add_argument('--num_epochs', type=int, default=100)
 parser.add_argument('--mode', default='state_only')
 parser.add_argument('--dataset_mode', default='partial')
-parser.add_argument('--output_model_path')
-parser.add_argument('--traj_len', type=int)
+parser.add_argument('--output_model_path', default=None, help='the output path for models and logs')
+parser.add_argument('--traj_len', type=int, help='the length of the partial trajectory')
+args = parser.parse_args()
+counter = 0
+while True:
+    log_dir = f'log/runs/{args.env_name}/grirl_{counter}'  # for tensorboard
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+        break
+    counter += 1
+writer = SummaryWriter(log_dir=log_dir)
 args = parser.parse_args()
 args.output_model_path = log_dir + '/model_ckpt'
 os.makedirs(args.output_model_path, exist_ok=True)

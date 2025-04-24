@@ -108,7 +108,7 @@ class HopperEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             if self.reward_mode == 'state_only':
                 net_reward = self.reward_net.compute_reward(observation)
             elif self.reward_mode == 'state_pair':
-                net_reward = self.reward_net.compute_reward(np.concatenate([observation_before, obseravtion], axis=0))
+                net_reward = self.reward_net.compute_reward(np.concatenate([observation_before, observation], axis=0))
             elif self.reward_mode == 'state_action':
                 net_reward = self.reward_net.compute_reward(np.concatenate([observation_before, np.clip(action, -1., 1.)], axis=0))
             elif self.reward_mode == 'state_action_state':

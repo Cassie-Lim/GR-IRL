@@ -15,8 +15,7 @@ from torch.autograd import Variable
 from trpo import trpo_step
 from utils import *
 from torch.utils.tensorboard import SummaryWriter
-import custom_envs.hopper
-import custom_envs.walker2d
+import custom_envs
 # import swimmer
 # import reacher
 # import inverted_double_pendulum

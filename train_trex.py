@@ -13,14 +13,7 @@ import dataset
 
 import pdb
 from torch.utils.tensorboard import SummaryWriter
-counter = 0
-while True:
-    log_dir = f'log/runs/trex_{counter}'  # for tensorboard
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-        break
-    counter += 1
-writer = SummaryWriter(log_dir=log_dir)
+
 parser = argparse.ArgumentParser(description='PyTorch actor-critic example')
 parser.add_argument('--env-name', default="Reacher-v1", metavar='G',
                     help='name of the environment to run')
@@ -38,10 +31,17 @@ parser.add_argument('--train_traj_nums', nargs='+', type=int, help='the number o
 parser.add_argument('--num_epochs', type=int, default=100, help='the path to the testing demonstrations files')
 parser.add_argument('--mode', default='state_only', help='the mode of the reward function')
 parser.add_argument('--dataset_mode', default='partial', help='the dataset mode')
-parser.add_argument('--output_model_path', help='the output path for models and logs')
+parser.add_argument('--output_model_path', default=None, help='the output path for models and logs')
 parser.add_argument('--traj_len', type=int, help='the length of the partial trajectory')
 args = parser.parse_args()
-
+counter = 0
+while True:
+    log_dir = f'log/runs/{args.env_name}/trex_{counter}'  # for tensorboard
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+        break
+    counter += 1
+writer = SummaryWriter(log_dir=log_dir)
 args.output_model_path = log_dir + '/model_ckpt'
 os.makedirs(args.output_model_path, exist_ok=True)
 
