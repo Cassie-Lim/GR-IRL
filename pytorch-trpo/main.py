@@ -137,6 +137,12 @@ def update_params(batch):
 running_state = ZFilter((num_inputs,), clip=5)
 running_reward = ZFilter((1,), demean=False, clip=10)
 
+TRAJ_PER_FILE = 500
+
+all_trajs = [] 
+all_rewards = []
+file_count = 0 
+
 for i_episode in count(1):
     memory = Memory()
 
@@ -156,6 +162,7 @@ for i_episode in count(1):
 
             next_state, reward, done, _ = env.step(action)
             reward_sum += reward
+            reward_seq.append(reward) 
 
             traj.append(np.concatenate([state.copy(), action.copy()], axis=0))
 
@@ -177,27 +184,28 @@ for i_episode in count(1):
         num_episodes += 1
         reward_batch += reward_sum
 
-    if i_episode % args.log_interval == 0 and i_episode <= args.log_interval * 100:
-        demo = {
-            'traj': [np.array(traj)],          
-            'reward':  [np.array(reward_seq)]
-        }
+        all_trajs.append(np.array(traj))
+        all_rewards.append(np.array(reward_seq))
 
-        demo_fname = (
-            f"{args.env_name}_"
-            f"noise_{args.noise:.1f}_"
-            f"interval_{args.log_interval}_"
-            f"rew_{reward_sum:.2f}.pt"
-        )
-
-        import pickle
-        out_path = os.path.join('/nethome/wshin49/flash8/irl/GR-IRL/demo', demo_fname)
-        with open(out_path, 'wb') as f:
-            pickle.dump(demo, f)
-        print(f"Saved checkpoint #{i_episode}: return={reward_sum:.2f}")
+        if len(all_trajs) == TRAJ_PER_FILE:
+            demo = {
+                'traj':   all_trajs,
+                'reward': all_rewards
+            }
+            demo_fname = (
+                f"{args.env_name}_"
+                f"noise_{args.noise:.1f}_"
+                f"interval_{args.log_interval}_"
+                f"batch_{file_count}.pt"
+            )
+            out_path = os.path.join('/nethome/wshin49/flash8/irl/GR-IRL/demo', demo_fname)
+            import pickle
+            with open(out_path, 'wb') as f:
+                pickle.dump(demo, f)
+            print(f"Saved demo file #{file_count}: {demo_fname}")
+            file_count += 1
+            all_trajs = []
+            all_rewards = []
 
     batch = memory.sample()
     update_params(batch)
-
-    avg_rew = reward_batch / num_episodes
-    print(f"Episode {i_episode}\tAvg reward over {num_episodes} eps: {avg_rew:.2f}")

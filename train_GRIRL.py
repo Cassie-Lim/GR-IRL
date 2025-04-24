@@ -22,7 +22,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--env-name', default="Reacher-v1")
 parser.add_argument('--seed', type=int, default=543)
 parser.add_argument('--batch-size', type=int, default=64)
-parser.add_argument('--log-interval', type=int, default=1)
+parser.add_argument('--log-interval', type=int, default=100)
 parser.add_argument('--save-interval', type=int, default=1)
 parser.add_argument('--train_demo_files', nargs='+')
 parser.add_argument('--test_demo_files', nargs='+')
@@ -88,7 +88,7 @@ def compute_traj_reward(traj, net):
     return traj_mu, traj_var
 
 
-best_acc = 0
+best_acc = float('-inf')
 for epoch in range(args.num_epochs):
     # --- Eval ---
     if epoch % args.save_interval == 0:
@@ -101,8 +101,8 @@ for epoch in range(args.num_epochs):
             mu1, var1 = compute_traj_reward(traj1, reward_net)
             mu2, var2 = compute_traj_reward(traj2, reward_net)
 
-            score1 = beta * mu1 + 0.5 * (beta**2) * var1
-            score2 = beta * mu2 + 0.5 * (beta**2) * var2
+            score1 = mu1 + 0.5 * var1
+            score2 = mu2 + 0.5 * var2
 
             pred_rank = (score1 < score2)
             true_rank = (rew1 < rew2)
@@ -113,10 +113,11 @@ for epoch in range(args.num_epochs):
                 break
 
         acc = acc_counter / counter
-        print(f"[Eval] Epoch {epoch}, Accuracy = {acc:.4f}")
+        print(f"[Eval] Epoch {epoch}, Accuracy = {acc:.4f}, Best Accuracy = {best_acc:.4f}")
         if acc > best_acc:
             best_acc = acc
             torch.save(reward_net.state_dict(), os.path.join(args.output_model_path, f'reward_net_best_{epoch}.pth'))
+            print(f"Saved model at path {args.output_model_path}/reward_net_best_{epoch}.pth")
         writer.add_scalar("Eval/Accuracy", acc, epoch)
         writer.add_scalar("Eval/Best_Accuracy", best_acc, epoch)
 
@@ -126,22 +127,18 @@ for epoch in range(args.num_epochs):
         if use_gpu:
             traj1, rew1, traj2, rew2 = [t.cuda() for t in traj1], rew1.cuda(), [t.cuda() for t in traj2], rew2.cuda()
 
+        optimizer.zero_grad()
+
         mu1, var1 = compute_traj_reward(traj1, reward_net)
         mu2, var2 = compute_traj_reward(traj2, reward_net)
 
-        score1 = beta * mu1 + 0.5 * (beta**2) * var1
-        score2 = beta * mu2 + 0.5 * (beta**2) * var2
+        score1 = mu1 + 0.5 * var1
+        score2 = mu2 + 0.5 * var2
 
-        # logit_diff = score1 - score2
-        # label      = (rew1 > rew2).float().view(-1, 1)
-
-        # loss_rank = torch.nn.BCEWithLogitsLoss()(logit_diff, label)
-        logit_diff = (score1 - score2).view(-1)               # shape (B,)
-        labels     = (rew1 > rew2).float()                    # 1 if τ1 better
-        bce_loss   = torch.nn.BCEWithLogitsLoss()(logit_diff, labels)
-        loss       = bce_loss + lambda_var*(var1+var2).mean()
-
-        optimizer.zero_grad()
+        logit_diff = score1 - score2
+        label      = (rew1 > rew2).float().view(-1, 1)
+        loss = torch.nn.BCEWithLogitsLoss()(logit_diff, label)
+        
         loss.backward()
         optimizer.step()
 

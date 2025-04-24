@@ -28,7 +28,7 @@ parser.add_argument('--seed', type=int, default=543, metavar='N',
                     help='random seed (default: 1)')
 parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                     help='random seed (default: 1)')
-parser.add_argument('--log-interval', type=int, default=1, metavar='N',
+parser.add_argument('--log-interval', type=int, default=100, metavar='N',
                     help='interval between training status logs (default: 10)')
 parser.add_argument('--save-interval', type=int, default=1, metavar='N',
                     help='interval between training status logs (default: 10)')
@@ -83,7 +83,7 @@ if use_gpu:
     reward_net = reward_net.cuda()
 optimizer = optim.Adam(reward_net.parameters(), lr=0.001, weight_decay=0.0005)
 
-best_acc = 0
+best_acc = float('-inf')
 for epoch in range(args.num_epochs):
     counter = 0
     acc_counter = 0
