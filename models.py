@@ -63,6 +63,7 @@ class GaussianRewardNet(nn.Module):
         # Output both mean and log variance
         layer_list.append(nn.Linear(hidden_dim, 2))
         self.net = nn.Sequential(*layer_list)
+        nn.init.constant_(self.net[-1].bias.data[1], -2.0)
 
     def forward(self, x):
         """

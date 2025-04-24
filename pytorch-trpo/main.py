@@ -38,7 +38,7 @@ parser.add_argument('--batch-size', type=int, default=15000, metavar='N',
 parser.add_argument('--noise',    type=float, default=0.0,  help='amount of env noise')
 parser.add_argument('--render', action='store_true',
                     help='render the environment')
-parser.add_argument('--log-interval', type=int, default=10, metavar='N',
+parser.add_argument('--log-interval', type=int, default=3, metavar='N',
                     help='interval between training status logs (default: 10)')
 args = parser.parse_args()
 
@@ -147,12 +147,17 @@ for i_episode in count(1):
         state = env.reset()
         state = running_state(state)
 
+        traj = []
+        reward_seq = []
         reward_sum = 0
         for t in range(10000): # Don't infinite loop while learning
             action = select_action(state)
             action = action.data[0].numpy()
+
             next_state, reward, done, _ = env.step(action)
             reward_sum += reward
+
+            traj.append(np.concatenate([state.copy(), action.copy()], axis=0))
 
             next_state = running_state(next_state)
 
@@ -172,24 +177,27 @@ for i_episode in count(1):
         num_episodes += 1
         reward_batch += reward_sum
 
-    reward_batch /= num_episodes
+    if i_episode % args.log_interval == 0 and i_episode <= args.log_interval * 100:
+        demo = {
+            'traj': [np.array(traj)],          
+            'reward':  [np.array(reward_seq)]
+        }
+
+        demo_fname = (
+            f"{args.env_name}_"
+            f"noise_{args.noise:.1f}_"
+            f"interval_{args.log_interval}_"
+            f"rew_{reward_sum:.2f}.pt"
+        )
+
+        import pickle
+        out_path = os.path.join('/nethome/wshin49/flash8/irl/GR-IRL/demo', demo_fname)
+        with open(out_path, 'wb') as f:
+            pickle.dump(demo, f)
+        print(f"Saved checkpoint #{i_episode}: return={reward_sum:.2f}")
+
     batch = memory.sample()
     update_params(batch)
 
-    if i_episode % args.log_interval == 0:
-        print('Episode {}\tLast reward: {}\tAverage reward {:.2f}'.format(
-            i_episode, reward_sum, reward_batch))
-        avg_rew = reward_batch
-        print(f'Episode {i_episode}\tLast reward: {reward_sum}\tAverage reward {avg_rew:.2f}')
- 
-        # --- checkpoint here ---
-        fname = (
-            f"{args.env_name}"
-            f"_noise_{args.noise:.1f}"
-            f"_interval_{args.log_interval}"
-            f"_rew_{avg_rew:.2f}.pt"
-        )
-        path = os.path.join('../demo', fname)
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        torch.save(policy_net.state_dict(), path)
-        print(f"  → saved checkpoint: {path}")
+    avg_rew = reward_batch / num_episodes
+    print(f"Episode {i_episode}\tAvg reward over {num_episodes} eps: {avg_rew:.2f}")

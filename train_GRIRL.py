@@ -22,7 +22,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--env-name', default="Reacher-v1")
 parser.add_argument('--seed', type=int, default=543)
 parser.add_argument('--batch-size', type=int, default=64)
-parser.add_argument('--log-interval', type=int, default=10)
+parser.add_argument('--log-interval', type=int, default=1)
 parser.add_argument('--save-interval', type=int, default=1)
 parser.add_argument('--train_demo_files', nargs='+')
 parser.add_argument('--test_demo_files', nargs='+')
@@ -32,8 +32,14 @@ parser.add_argument('--mode', default='state_only')
 parser.add_argument('--dataset_mode', default='partial')
 parser.add_argument('--output_model_path')
 parser.add_argument('--traj_len', type=int)
+parser.add_argument('--beta',     type=float, default=1.0)
+parser.add_argument('--lambda-var', type=float, default=1e-3)
 args = parser.parse_args()
 args.output_model_path = log_dir + '/model_ckpt'
+
+beta = args.beta
+lambda_var = args.lambda_var
+
 os.makedirs(args.output_model_path, exist_ok=True)
 use_gpu = torch.cuda.is_available()
 
@@ -69,17 +75,18 @@ reward_net = models.GaussianRewardNet(input_dim).float()
 if use_gpu:
     reward_net = reward_net.cuda()
 
-optimizer = optim.Adam(reward_net.parameters(), lr=1e-3, weight_decay=5e-4)
+optimizer = optim.Adam(reward_net.parameters(), lr=1e-3)
 
 def compute_traj_reward(traj, net):
     mu_list, var_list = [], []
     for t in traj:
         mu, sigma = net(t)
         mu_list.append((mu).sum(dim=0, keepdim=True))
-        var_list.append((sigma ** 2).sum(dim=0, keepdim=True)) 
+        var_list.append((sigma).sum(dim=0, keepdim=True)) 
     traj_mu = torch.cat(mu_list, dim=0)  # shape (B, 1), sum of means for each trajectory
     traj_var = torch.cat(var_list, dim=0)
     return traj_mu, traj_var
+
 
 best_acc = 0
 for epoch in range(args.num_epochs):
@@ -94,8 +101,8 @@ for epoch in range(args.num_epochs):
             mu1, var1 = compute_traj_reward(traj1, reward_net)
             mu2, var2 = compute_traj_reward(traj2, reward_net)
 
-            score1 = mu1 + 0.5 * var1
-            score2 = mu2 + 0.5 * var2
+            score1 = beta * mu1 + 0.5 * (beta**2) * var1
+            score2 = beta * mu2 + 0.5 * (beta**2) * var2
 
             pred_rank = (score1 < score2)
             true_rank = (rew1 < rew2)
@@ -122,13 +129,17 @@ for epoch in range(args.num_epochs):
         mu1, var1 = compute_traj_reward(traj1, reward_net)
         mu2, var2 = compute_traj_reward(traj2, reward_net)
 
-        score1 = mu1 + 0.5 * var1
-        score2 = mu2 + 0.5 * var2
+        score1 = beta * mu1 + 0.5 * (beta**2) * var1
+        score2 = beta * mu2 + 0.5 * (beta**2) * var2
 
-        logit_diff = score1 - score2
-        label      = (rew1 > rew2).float().view(-1, 1)
+        # logit_diff = score1 - score2
+        # label      = (rew1 > rew2).float().view(-1, 1)
 
-        loss = torch.nn.BCEWithLogitsLoss()(logit_diff, label)
+        # loss_rank = torch.nn.BCEWithLogitsLoss()(logit_diff, label)
+        logit_diff = (score1 - score2).view(-1)               # shape (B,)
+        labels     = (rew1 > rew2).float()                    # 1 if τ1 better
+        bce_loss   = torch.nn.BCEWithLogitsLoss()(logit_diff, labels)
+        loss       = bce_loss + lambda_var*(var1+var2).mean()
 
         optimizer.zero_grad()
         loss.backward()
@@ -139,4 +150,4 @@ for epoch in range(args.num_epochs):
             writer.add_scalar("Train/Loss", loss.item(), epoch * len(train_loader) + iter_)
         if iter_ > 5000:
             break
-    writer.close()
+writer.close()

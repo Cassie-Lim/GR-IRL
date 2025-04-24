@@ -15,6 +15,7 @@ def rank_collate_func(items):
     item_list[1] = torch.Tensor(item_list[1]).float()
     item_list[3] = torch.Tensor(item_list[3]).float()
     return item_list
+    
 class TrajDataset(data_utils.Dataset):
     def __init__(self, traj_files, pair_nums, state_dim, action_dim, mode='state_only', traj_len=50, seed=1234):
         self.trajs = []
@@ -71,6 +72,7 @@ class TrajDataset(data_utils.Dataset):
 
         ret_traj = np.array(ret_traj)
         return torch.from_numpy(ret_traj).float(), demo_id
+
 class RankingLimitDataset(data_utils.Dataset):
     def __init__(self, traj_files, pair_nums, state_dim, action_dim, mode='state_only', traj_len=50, seed=1234):
         self.pairs1 = []
@@ -86,9 +88,9 @@ class RankingLimitDataset(data_utils.Dataset):
             self.trajs += loaded_data['traj']
             all_pairs = self.get_all_pairs(loaded_data['traj'], loaded_data['reward'], traj_len)
             if pair_nums is not None:
-                sample_idx1 = np.random.choice(len(all_pairs), pair_nums[i], replace=False)
+                sample_idx1 = np.random.choice(len(all_pairs), pair_nums[i], replace=True)
                 self.pairs1 += [all_pairs[idx] for idx in sample_idx1]
-                sample_idx2 = np.random.choice(len(all_pairs), pair_nums[i], replace=False)
+                sample_idx2 = np.random.choice(len(all_pairs), pair_nums[i], replace=True)
                 self.pairs2 += [all_pairs[idx] for idx in sample_idx2]
             else:
                 self.pairs1 += all_pairs
