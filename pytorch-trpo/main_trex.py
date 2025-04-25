@@ -62,6 +62,7 @@ counter=0
 while True:
     output_path = os.path.join(args.output_path, 'TREX', args.env_name.split('-')[0], str(counter))
     if os.path.exists(output_path):
+        counter += 1
         continue
     args.output_path = output_path
     os.system('mkdir -p '+args.output_path)
@@ -73,7 +74,6 @@ if args.mode is not None:
     env = gym.make(args.env_name, reward_mode=args.mode)
 else:
     env = gym.make(args.env_name)
-args.test_env_name = args.env_name
 test_env = gym.make(args.test_env_name)
 
 num_inputs = env.observation_space.shape[0]

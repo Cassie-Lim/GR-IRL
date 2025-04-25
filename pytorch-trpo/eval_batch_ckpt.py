@@ -64,8 +64,8 @@ if __name__ == '__main__':
 
     fig, ax = plt.subplots(figsize=(8, 5))
     result_pairs = [
-        ('pytorch-trpo/the_log_path/TREX/CustomHopper/0', 'TREX'),
-        ('pytorch-trpo/the_log_path/GRIRL/CustomHopper/0', 'GRIRL'),
+        ('pytorch-trpo/the_log_path/TREX/CustomHalfCheetah/0', 'TREX'),
+        ('pytorch-trpo/the_log_path/GRIRL/CustomHalfCheetah/0', 'GRIRL'),
     ]
     for dir_path, label in result_pairs:
         ckpt_files = sorted(
@@ -106,5 +106,5 @@ if __name__ == '__main__':
     ax.grid(True)
     ax.legend()
     plt.tight_layout()
-    plt.savefig('eval_reward_comparison.png')
+    plt.savefig('eval_reward_comparison_halfcheetah_150.png')
     print("Saved: eval_reward_comparison.png")
